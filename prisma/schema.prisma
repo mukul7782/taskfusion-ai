@@ -1,0 +1,88 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  avatar    String?
+  role      String   @default("MEMBER")
+  tasks     Task[]   @relation("AssignedTasks")
+  createdAt DateTime @default(now())
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  key         String   // e.g. "TF"
+  tasks       Task[]
+  sprints     Sprint[]
+  createdAt   DateTime @default(now())
+}
+
+model Sprint {
+  id        String   @id @default(uuid())
+  name      String   // e.g. "Sprint 1"
+  goal      String?
+  startDate DateTime
+  endDate   DateTime
+  status    String   @default("ACTIVE") // ACTIVE, COMPLETED, PLANNING
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks     Task[]
+}
+
+model Task {
+  id             String    @id @default(uuid())
+  title          String
+  description    String?   // Markdown / Notion block content
+  status         String    @default("TODO") // TODO, IN_PROGRESS, IN_REVIEW, DONE
+  priority       String    @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  storyPoints    Int       @default(1)
+  estimatedDays  Int       @default(1)
+  predictedDate  DateTime? // Calculated by AI
+  dueDate        DateTime?
+  tags           String    @default("[]") // JSON string array
+  assigneeId     String?
+  assignee       User?     @relation("AssignedTasks", fields: [assigneeId], references: [id])
+  projectId      String
+  project        Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sprintId       String?
+  sprint         Sprint?   @relation(fields: [sprintId], references: [id])
+  subtasks       Subtask[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model Subtask {
+  id        String   @id @default(uuid())
+  title     String
+  completed Boolean  @default(false)
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  action    String
+  user      String
+  details   String
+  createdAt DateTime @default(now())
+}
+
+model AISummary {
+  id               String   @id @default(uuid())
+  date             DateTime @default(now())
+  completedCount   Int
+  focusHours       Float
+  distractionHours Float
+  productivityScore Int
+  summaryText      String
+}
